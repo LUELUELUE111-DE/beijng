@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<title>北京小分队</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<style>
+		*{margin: 0;padding: 0;box-sizing: border-box;}
+		html,body{height: 100%;}
+		body{
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			background: #000;
+			perspective: 1000px;
+			transform-style: preserve-3d;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		}
+		
+		/* 音乐控制按钮 */
+		#audio-control {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			z-index: 100;
+			width: 60px;
+			height: 60px;
+			border-radius: 50%;
+			background: rgba(255, 255, 255, 0.2);
+			backdrop-filter: blur(5px);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			border: 2px solid rgba(255, 255, 255, 0.3);
+		}
+		
+		#audio-control:hover {
+			background: rgba(255, 255, 255, 0.3);
+			transform: scale(1.1);
+		}
+		
+		/* 3D容器 */
+		#box{
+			position: relative;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			transform-style: preserve-3d;
+			animation: rotate 60s linear infinite;
+		}
+		
+		/* 照片样式 - 已移除边框和阴影 */
+		#box .photo {
+			position: absolute;
+			width: 150px;
+			height: 100px;
+			backface-visibility: hidden;
+			border-radius: 8px;
+			transition: all 0.3s ease;
+			overflow: hidden;
+			z-index: 1;
+		}
+		
+		#box .photo img {
+			width: 70%;
+			height: 70%;
+			object-fit: cover;
+			display: block;
+			transition: transform 0.5s ease;
+		}
+		
+		#box .photo:hover {
+			transform: scale(1.8) translateZ(100px);
+			z-index: 100;
+		}
+		
+		#box .photo:hover img {
+			transform: scale(1.3);
+			z-index: 100;
+		}
+		
+		/* 地面效果 */
+		#box p{
+			position: absolute;
+			width: 1200px;
+			height: 1200px;
+			background: radial-gradient(center center, 600px 600px, rgba(50,50,50,0.3), rgba(0,0,0,0));
+			border-radius: 50%;
+			transform: rotateX(90deg) translate3d(-600px, 0, -100px);
+		}
+		
+		/* 标题样式 */
+		.title {
+			position: fixed;
+			top: 30px;
+			left: 50%;
+			transform: translateX(-50%);
+			color: white;
+			font-size: 32px;
+			text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+			z-index: 10;
+		}
+		
+		/* 提示文字 */
+		.hint {
+			position: fixed;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 14px;
+			z-index: 10;
+		}
+		
+		/* 旋转动画 */
+		@keyframes rotate {
+			0% {
+				transform: rotateY(0deg);
+			}
+			100% {
+				transform: rotateY(360deg);
+			}
+		}
+		
+		/* 暂停旋转时的样式 */
+		#box.paused {
+			animation-play-state: paused;
+		}
+	</style>
+</head>
+<body>
+	<h1 class="title">北京小分队</h1>
+	
+	<div id="box">
+		<!-- 照片将通过JS动态添加 -->
+		<p></p>
+	</div>
+	
+	<div id="audio-control">
+		<i class="fas fa-pause"></i>
+	</div>
+	
+	<div class="hint">提示：点击照片可暂停/继续旋转，点击右侧按钮可控制音乐</div>
+	
+	<!-- 音乐路径已修改为本地文件 -->
+	<audio id="music" loop="loop" preload="auto"
+		   src="music/Nobody_Else.mp3">
+	</audio>
+
+	<script>
+		// 获取DOM元素
+		const box = document.getElementById('box');
+		const audioControl = document.getElementById('audio-control');
+		const music = document.getElementById('music');
+		const icon = audioControl.querySelector('i');
+		
+		// 照片数量
+		const photoCount = 33;
+		
+		// 照片路径数组 - 请将这里的路径替换为你的本地照片路径
+		const photoPaths = ['images/photo1.jpg', 'images/photo2.jpg','images/photo3.jpg', 'images/photo4.jpg','images/photo5.jpg', 'images/photo6.jpg','images/photo7.jpg', 'images/photo8.jpg', 'images/photo9.jpg', 'images/photo10.jpg', 'images/photo11.jpg', 'images/photo12.jpg', 'images/photo13.jpg', 'images/photo14.jpg', 'images/photo15.jpg', 'images/photo16.jpg', 'images/photo17.jpg', 'images/photo18.jpg', 'images/photo19.jpg', 'images/photo20.jpg', 'images/photo21.jpg', 'images/photo22.jpg', 'images/photo23.jpg', 'images/photo24.jpg', 'images/photo25.jpg', 'images/photo26.jpg', 'images/photo27.jpg', 'images/photo28.jpg', 'images/photo29.jpg', 'images/photo30.jpg', 'images/photo31.jpg', 'images/photo32.jpg', 'images/photo33.jpg'
+		];
+		// 创建照片元素并设置3D位置
+		for(let i = 0; i < photoCount; i++) {
+			// 计算每张照片的角度
+			const angle = (i * (360 / photoCount));
+			
+			// 创建照片容器
+			const photo = document.createElement('div');
+			photo.className = 'photo';
+			
+			// 创建img元素
+			const img = document.createElement('img');
+			img.src = photoPaths[i];
+			img.alt = `回忆 ${i+1}`;
+			
+			// 图片加载失败时显示默认图片
+			img.onerror = function() {
+				this.src = `https://picsum.photos/seed/${i}/300/200`;
+			};
+			
+			photo.appendChild(img);
+			box.appendChild(photo);
+			
+			// 设置3D位置，围绕Y轴分布
+			photo.style.transform = `rotateY(${angle}deg) translateZ(650px)`;
+		}
+
+	// 音乐控制
+		audioControl.addEventListener('click', function() {
+			if(music.paused) {
+				music.play();
+				icon.classList.remove('fa-play');
+				icon.classList.add('fa-pause');
+			} else {
+				music.pause();
+				icon.classList.remove('fa-pause');
+				icon.classList.add('fa-play');
+			}
+		});
+		
+		// 点击照片暂停/继续旋转
+		box.addEventListener('click', function(e) {
+			if(e.target.classList.contains('photo') || e.target.parentElement.classList.contains('photo')) {
+				box.classList.toggle('paused');
+			}
+		});
+		
+		// 初始播放音乐
+		music.play().catch(e => {
+			// 自动播放可能被浏览器阻止，此时显示播放按钮
+			console.log('自动播放被阻止，需要用户交互后才能播放音乐');
+			icon.classList.remove('fa-pause');
+			icon.classList.add('fa-play');
+		});
+	</script>
+</body>
+</html>
